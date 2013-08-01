@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ -z "$1" ];
+then
+    TIMEBOX="25m"
+else
+    TIMEBOX=$1
+fi
+
+utimer -c $TIMEBOX && \
+mpg123 ~/bin/GONG0.mp3 && \
+./log_action.sh pomodoro
