@@ -7,13 +7,38 @@ require("beautiful")
 -- Notification library
 require("naughty")
 
+-- {{{ Error handling
+-- Check if awesome encountered an error during startup and fell back to
+-- another config (This code will only ever execute for the fallback config)
+if awesome.startup_errors then
+    naughty.notify({ preset = naughty.config.presets.critical,
+                     title = "Oops, there were errors during startup!",
+                     text = awesome.startup_errors })
+end
+
+-- Handle runtime errors after startup
+do
+    local in_error = false
+    awesome.add_signal("debug::error", function (err)
+        -- Make sure we don't go into an endless error loop
+        if in_error then return end
+        in_error = true
+
+        naughty.notify({ preset = naughty.config.presets.critical,
+                         title = "Oops, an error happened!",
+                         text = err })
+        in_error = false
+    end)
+end
+-- }}}
+
 -- {{{ Variable definitions
 -- Themes define colours, icons, and wallpapers
 beautiful.init("/usr/share/awesome/themes/default/theme.lua")
 
 -- This is used later as the default terminal and editor to run.
 terminal = "xterm"
-gnometerminal = "gnome-terminal"
+bigterminal = "gnome-terminal"
 editor = os.getenv("EDITOR") or "nano"
 editor_cmd = terminal .. " -e " .. editor
 
@@ -47,7 +72,7 @@ layouts =
 tags = {}
 for s = 1, screen.count() do
     -- Each screen has its own tag table.
-    tags[s] = awful.tag({ '1:main', '2:web', '3:prog', '4:ide', '5:log', '6:perf', '7:music', '8:zim', '9:skype' }, s, layouts[1])
+    tags[s] = awful.tag({ '1:terminal', '2:programming', '3:communication', '4:multimedia' }, s, layouts[1])
 end
 -- }}}
 
@@ -55,7 +80,7 @@ end
 -- Create a laucher widget and a main menu
 myawesomemenu = {
    { "manual", terminal .. " -e man awesome" },
-   { "edit config", editor_cmd .. " " .. awful.util.getdir("config") .. "/rc.lua" },
+   { "edit config", editor_cmd .. " " .. awesome.conffile },
    { "restart", awesome.restart },
    { "quit", awesome.quit }
 }
@@ -68,211 +93,10 @@ mymainmenu = awful.menu({ items = { { "awesome", myawesomemenu, beautiful.awesom
 mylauncher = awful.widget.launcher({ image = image(beautiful.awesome_icon),
                                      menu = mymainmenu })
 -- }}}
---
--- Separators
---
-spacer = widget({ type = "textbox" })
-separator = widget({ type = "textbox" })
-dash = widget({ type = "textbox" })
-spacer.text = " "
-separator.text = "|"
-dash.text = "-"
-
-function shell(c)
-  local o, h
-  h = assert(io.popen(c,"r"))
-  o = h:read("*all")
-  h:close()
-  return o
-end
-
 
 -- {{{ Wibox
 -- Create a textclock widget
 mytextclock = awful.widget.textclock({ align = "right" })
-
--- research burndown
-researchwidget = widget({type = "textbox", name = "researchwidget", align = "right" })
-
-function research()
-  researchwidget.text = ' R: '..shell('/home/buneku/bin/research_burndown.sh')
-end
-
--- development burndown
-developmentwidget = widget({type = "textbox", name = "developmentwidget", align = "right" })
-
-function development()
-  developmentwidget.text = ' D: '..shell('/home/buneku/bin/development_burndown.sh')
-end
-
--- batterywidget
-batterywidget = widget({type = "textbox", name = "batterywidget", align = "right" })
-
-function batteryInfo(adapter)
-     spacer = " "
-     local fcur = io.open("/sys/class/power_supply/"..adapter.."/charge_now")    
-     local fcap = io.open("/sys/class/power_supply/"..adapter.."/charge_full")
-     local fsta = io.open("/sys/class/power_supply/"..adapter.."/status")
-     local cur = fcur:read()
-     local cap = fcap:read()
-     local sta = fsta:read()
-     local battery = math.floor(cur * 100 / cap)
-     if sta:match("Charging") then
-         dir = "^"
-         --dir = shell('printf a')
-         battery = "A/C ("..battery..")"
-     elseif sta:match("Discharging") then
-         dir = "v"
-         --dir = shell('/home/buneku/bin/research_burndown.sh')
-         if tonumber(battery) > 25 and tonumber(battery) < 75 then
-             battery = battery
-         elseif tonumber(battery) < 25 then
-             if tonumber(battery) < 10 then
-                 naughty.notify({ title      = "Battery Warning"
-                                , text       = "Battery low!"..spacer..battery.."%"..spacer.."left!"
-                                , timeout    = 5
-                                , position   = "top_right"
-                                , fg         = beautiful.fg_focus
-                                , bg         = beautiful.bg_focus
-                                })
-             end
-             battery = battery
-         else
-             battery = battery
-         end
-     else
-         dir = "="
-         battery = "A/C"
-     end
-     batterywidget.text = spacer.."Battery:"..spacer..dir..battery..dir..spacer
-     fcur:close()
-     fcap:close()
-     fsta:close()
- end
-
--- the widget
-mybattmon = widget({ type = "textbox", name = "mybattmon", align = "right" })
-
--- returns a string with battery info
-function battery_status ()
-    local battery = 0
-    local time = 0
-    local state = 0  -- discharging = -1, charging = 1, nothing = 0
-    local icon = ""
-    local fd = io.popen("powersave -b", "r")
-    if not fd then
-        do return "no info" end
-
-    end
-    local text = fd:read("*a")
-    io.close(fd)
-    if string.match(text, "discharging") then
-        state = -1
-        icon =  "▾"
-    else
-        state = 1
-        icon = "▴"
-    end
-
-    battery = string.match(text, "Remaining percent: (%d+)")
-    time = string.match(text, "Remaining minutes: (%d+)")
-    -- above string does not always match
-    if not time then
-        time = string.match(text, "(%d+) minutes until fully charged")
-    end
-
-    return battery .. "%/" .. time .. "m" .. "<b>" .. icon .."</b>"
-end
-
--- Create fraxbat widget
-fraxbat = widget({ type = "textbox", name = "fraxbat", align = "right" })
-fraxbat.text = 'fraxbat';
-
--- Globals used by fraxbat
-fraxbat_st= nil
-fraxbat_ts= nil
-fraxbat_ch= nil
-fraxbat_now = nil
-fraxbat_est= nil
-
--- Function for updating fraxbat
-function hook_fraxbat (tbw, bat)
-   -- Battery Present?
-   local fh= io.open("/sys/class/power_supply/"..bat.."/present", "r")
-   if fh == nil then
-      tbw.text="No Bat"
-      return(nil)
-   end
-   local stat= fh:read()
-   fh:close()
-   if tonumber(stat) < 1 then
-      tbw.text="Bat Not Present"
-      return(nil)
-   end
-
-   -- Status (Charging, Full or Discharging)
-   fh= io.open("/sys/class/power_supply/"..bat.."/status", "r")
-   if fh == nil then
-      tbw.text="N/S"
-      return(nil)
-   end
-   stat= fh:read()
-   fh:close()
-   if stat == 'Full' then
-      tbw.text="100%"
-      return(nil)
-   end
-   stat= string.upper(string.sub(stat, 1, 1))
-   if stat == 'D' then tag= 'i' else tag= 'b' end
-
-   -- Remaining + Estimated (Dis)Charging Time
-   local charge= nil 
-   fh= io.open("/sys/class/power_supply/"..bat.."/charge_full_design", "r")
-   if fh ~= nil then
-      local full= fh:read()
-      fh:close()
-      full= tonumber(full)
-      if full ~= nil then
-        fh= io.open("/sys/class/power_supply/"..bat.."/charge_now", "r")
-        if fh ~= nil then
-           local now= fh:read()
-           local est= 
-           fh:close()
-           if fraxbat_st == stat then
-              delta= os.difftime(os.time(),fraxbat_ts)
-              est= math.abs(fraxbat_ch - now)
-              if delta > 30 and est > 0 then
-                 est= delta/est
-                 if now == fraxbat_now then
-                    est= fraxbat_est
-                 else
-                    fraxbat_est= est
-                    fraxbat_now= now
-                 end
-                 if stat == 'D' then
-                    est= now*est
-                 else
-                    est= (full-now)*est
-                 end
-                 local h= math.floor(est/3600)
-                 est= est - h*3600
-                 est= string.format(',%02d:%02d',h,math.floor(est/60))
-              else
-                 est= nil
-              end
-           else
-              fraxbat_st= stat
-              fraxbat_ts= os.time()
-              fraxbat_ch= now
-              fraxbat_now= nil
-              fraxbat_est= nil
-           end
-           charge=':<'..tag..'>'..tostring(math.ceil((100*now)/full))..'%</'..tag..'>'..est
-        end
-      end
-   end
-   tbw.text= stat..charge
-end
 
 -- Create a systray
 mysystray = widget({ type = "systray" })
@@ -353,17 +177,11 @@ for s = 1, screen.count() do
         },
         mylayoutbox[s],
         mytextclock,
-        separator,
-        spacer,
-        researchwidget,
-        --separator,
-        --spacer,
-        --developmentwidget,
-        separator,
-        batterywidget,
+
+        -- TODO: The place to display number of pomodoros complete today
+        -- See: http://awesome.naquadah.org/wiki/Widgets_in_awesome on how to do it
+
         s == 1 and mysystray or nil,
-        --mybattmon,
-        --fraxbat,
         mytasklist[s],
         layout = awful.widget.layout.horizontal.rightleft
     }
@@ -380,6 +198,16 @@ root.buttons(awful.util.table.join(
 
 -- {{{ Key bindings
 globalkeys = awful.util.table.join(
+
+    -- pause rhythmbox
+    awful.key({ modkey }, "F1", function () awful.util.spawn("rhythmbox-client --pause") end),
+    
+    -- start playing music with rhythmbox
+    awful.key({ modkey }, "F2", function () awful.util.spawn("rhythmbox-client --play") end),
+
+    -- screen-lock
+    awful.key({ modkey }, "F12", function () awful.util.spawn("xscreensaver-command --lock") end),
+
     awful.key({ modkey,           }, "Left",   awful.tag.viewprev       ),
     awful.key({ modkey,           }, "Right",  awful.tag.viewnext       ),
     awful.key({ modkey,           }, "Escape", awful.tag.history.restore),
@@ -412,18 +240,8 @@ globalkeys = awful.util.table.join(
 
     -- Standard program
     awful.key({ modkey,           }, "Return", function () awful.util.spawn(terminal) end),
-
-    awful.key({ modkey,           }, "q", function () awful.util.spawn('sudo poweroff') end),
-
-    awful.key({ modkey,           }, "t", function () awful.util.spawn(gnometerminal) end),
-    
-    awful.key({ modkey,           }, "e", function() awful.util.spawn('totem Library/EnglishRadio.pls') end),
-
-    awful.key({ modkey,           }, "s", function() awful.util.spawn('sudo pm-suspend') end),
-    awful.key({ modkey,           }, "c", function() awful.util.spawn('totem Library/Movies.pls') end),
-
+    awful.key({ modkey,           }, "t", function () awful.util.spawn(bigterminal) end),
     awful.key({ modkey, "Control" }, "r", awesome.restart),
-    
     awful.key({ modkey, "Shift"   }, "q", awesome.quit),
 
     awful.key({ modkey,           }, "l",     function () awful.tag.incmwfact( 0.05)    end),
@@ -565,26 +383,6 @@ client.add_signal("manage", function (c, startup)
         end
     end
 end)
-
-awful.hooks.timer.register(5, function()
-     batteryInfo("C23B")
-end)
-
-awful.hooks.timer.register(5, function()
-     research()
-end)
-
-awful.hooks.timer.register(5, function()
-     development()
-end)
-
--- Hook called every second
-function hook_timer ()
-    --mytextbox.text = " " .. os.date() .. " "
-    mybattmon.text = " " .. battery_status() .. " "
-end
-
-awful.hooks.timer.register(1, function () hook_fraxbat(fraxbat,'C23B') end)
 
 client.add_signal("focus", function(c) c.border_color = beautiful.border_focus end)
 client.add_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
