@@ -208,6 +208,8 @@ globalkeys = awful.util.table.join(
     -- screen-lock
     awful.key({ modkey }, "F12", function () awful.util.spawn("xscreensaver-command --lock") end),
 
+    awful.key({ modkey }, "y", function () awful.util.spawn("/home/para/bin/log_action.sh task") end),
+
     awful.key({ modkey,           }, "Left",   awful.tag.viewprev       ),
     awful.key({ modkey,           }, "Right",  awful.tag.viewnext       ),
     awful.key({ modkey,           }, "Escape", awful.tag.history.restore),
