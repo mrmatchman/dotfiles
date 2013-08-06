@@ -36,25 +36,69 @@ set list
 " Use the same symbols as TextMate for tabstops and EOLs
 set listchars=tab:»\ ,eol:¬
 
-" Set filetype stuff to on
-filetype on
+" Vundle required to set filetype to off
 filetype plugin on
 filetype indent on " this doesn't work...
 set fileformat=unix
 compiler ruby
 
+" --------------------
+" VUNDLE CONFIGURATION
+" --------------------
+filetype off
+
+set rtp+=~/.vim/bundle/vundle/
+call vundle#rc()
+
+" let Vundle manage Vundle
+" required! 
+Bundle 'gmarik/vundle'
+
+" My Bundles here:
+"
+" original repos on github
+Bundle 'Lokaltog/vim-easymotion'
+Bundle 'scrooloose/syntastic'
+" bundle
+Bundle 'Valloric/YouCompleteMe'
+
+"Bundle 'tpope/vim-fugitive'
+"Bundle 'rstacruz/sparkup', {'rtp': 'vim/'}
+"Bundle 'tpope/vim-rails.git'
+" vim-scripts repos
+"Bundle 'L9'
+"Bundle 'FuzzyFinder'
+" non github repos
+"Bundle 'git://git.wincent.com/command-t.git'
+" git repos on your local machine (ie. when working on your own plugin)
+"Bundle 'file:///Users/gmarik/path/to/plugin'
+" ...
+
+filetype plugin indent on     " required!
+"
+" Brief help
+" :BundleList          - list configured bundles
+" :BundleInstall(!)    - install(update) bundles
+" :BundleSearch(!) foo - search(or refresh cache first) for foo
+" :BundleClean(!)      - confirm(or auto-approve) removal of unused bundles
+"
+" see :h vundle for more details or wiki for FAQ
+" NOTE: comments after Bundle command are not allowed..
+" ------------------------
+" VANDLE CONFIGURATION END
+" ------------------------
 " Tabstops are 8 spaces
 "set ts=8 sts=0 sw=8 noexpandtab 
 "set autoindent
 
 " Config for Ruby
-set expandtab
-set tabstop=2 shiftwidth=2 softtabstop=2
-set autoindent
+"set expandtab
+"set tabstop=2 shiftwidth=2 softtabstop=2
+"set autoindent
 
 " Config for Python
 set expandtab
-set tabstop=4 shiftwidth=4 softtabstop=4
+set tabstop=2 shiftwidth=2 softtabstop=2
 set autoindent
 
 " set the search scan to wrap lines
